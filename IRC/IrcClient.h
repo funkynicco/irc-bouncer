@@ -2,9 +2,9 @@
 
 struct IrcUserinfo
 {
-    char szAccount[ 64 ];
-    char szNick[ 64 ];
-    char szName[ 64 ];
+    char szAccount[ MAX_ACCOUNTNAME ];
+    char szNick[ MAX_NICKNAME ];
+    char szName[ MAX_NAME ];
 
     IrcUserinfo()
     {
@@ -44,6 +44,7 @@ protected:
     virtual BOOL PreprocessPacket( const char* host, const char* header, const char* data );
 
 private:
+    CChannelManager m_channelManager;
     IrcUserinfo m_userinfo;
     SOCKET m_socket;
     fd_set m_fd;

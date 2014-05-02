@@ -78,12 +78,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="IRC\ChannelManager.cpp" />
     <ClCompile Include="IRC\IrcClient.cpp" />
     <ClCompile Include="Logger\Logger.cpp" />
     <ClCompile Include="Main.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="IRC\ChannelManager.h" />
     <ClInclude Include="IRC\IrcClient.h" />
+    <ClInclude Include="IRC\IRCStandards.h" />
     <ClInclude Include="Logger\Logger.h" />
     <ClInclude Include="StdAfx.h" />
   </ItemGroup>

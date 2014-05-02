@@ -10,8 +10,11 @@
 #include <time.h>
 
 #include <string>
+#include <map>
 using namespace std;
 
 #include "Utilities.inl"
 #include "Logger\Logger.h"
+#include "IRC\IRCStandards.h"
+#include "IRC\ChannelManager.h"
 #include "IRC\IrcClient.h"

@@ -69,7 +69,7 @@ void CIrcClient::Process()
         int len = recv( m_socket, m_buffer, sizeof( m_buffer ), 0 );
         if( len > 0 )
         {
-            LogData( FALSE, m_buffer, len );
+            //LogData( FALSE, m_buffer, len );
             PreprocessData( m_buffer, len );
         }
         else
@@ -187,24 +187,187 @@ BOOL CIrcClient::PreprocessPacket( const char* host, const char* header, const c
     else
         strcpy( data_small, data );
 
+    string x_nick, x_account, x_host;
+
     string host_x = host;
-    size_t pos = host_x.find( "@" );
+    size_t pos = host_x.find( "@" ); // strip away hostname
     if( pos != string::npos )
+    {
+        x_host = host_x.substr( pos + 1 );
         host_x = host_x.substr( 0, pos );
+    }
 
-    if( ( pos = host_x.find( "!" ) ) != string::npos )
+    if( ( pos = host_x.find( "!" ) ) != string::npos ) // strip away account name
+    {
+        x_account = host_x.substr( pos + 1 );
         host_x = host_x.substr( 0, pos );
+    }
 
-    printf( "HST(%s), HDR(%s), DT(%s)\n", host_x.c_str(), header, data_small );
-    CLogger::GetInstance()->Write( "[RECV-PACKET] Header(%s), Data(%s)\n", header, data );
+    if( x_host.length() == 0 )
+        x_host = host_x;
+    else
+        x_nick = host_x;
+
+    //printf( "HST(%s), HDR(%s), DT(%s)\n", host_x.c_str(), header, data_small );
+    if( x_nick.length() > 0 &&
+        x_account.length() > 0 )
+        CLogger::GetInstance()->Write( "[RECV-PACKET] Host(%s!%s@%s), Header(%s), Data(%s)\n", x_nick.c_str(), x_account.c_str(), x_host.c_str(), header, data );
+    else
+        CLogger::GetInstance()->Write( "[RECV-PACKET] Host(%s), Header(%s), Data(%s)\n", x_host.c_str(), header, data );
 
     if( _strcmpi( header, "001" ) == 0 )
     {
+        //SendFormat( "JOIN #flyffrepublic\r\n" );
         SendFormat( "JOIN #test\r\n" );
     }
     else if( _strcmpi( header, "PING" ) == 0 )
     {
         SendFormat( "PONG %s\r\n", data );
+    }
+    else if( _strcmpi( header, "JOIN" ) == 0 )
+    {
+        // ... joined a channel waw
+        if( x_nick.compare( m_userinfo.szNick ) == 0 ) // myself
+        {
+            // we've essentially joined the channel here
+
+            if( strlen( data ) < 3 )
+                return FALSE;
+
+            auto channel = m_channelManager.AddChannel( data + 2 );
+            if( channel == NULL )
+            {
+                printf( __FUNCTION__ " m_channelManager.AddChannel returned null! (channel #%s)\n", data + 2 );
+                return FALSE;
+            }
+
+            channel->AddUser( m_userinfo.szNick )->bIsMe = TRUE;
+
+            printf( "You joined '#%s'\n", data + 2 );
+        }
+        else
+        {
+            // someone else joined a channel we are in
+            auto channel = m_channelManager.GetChannel( data + 2 );
+            if( channel == NULL )
+            {
+                printf( __FUNCTION__ " m_channelManager.GetChannel returned null! (channel #%s)\n", data + 2 );
+                return FALSE;
+            }
+
+            if( !channel->AddUser( x_nick.c_str() ) )
+            {
+                printf( __FUNCTION__ " Channel AddUser returned false! (channel #%s, user %s)\n", data + 2, x_nick.c_str() );
+                return FALSE;
+            }
+
+            printf( "'%s' joined '#%s'\n", x_nick.c_str(), data + 2 );
+        }
+    }
+    else if( _strcmpi( header, "PART" ) == 0 )
+    {
+        size_t dataLen = strlen( data );
+        string channelName = dataLen > 0 ? ( data + 1 ) : data;
+        size_t pos = channelName.find( " " );
+        if( pos != string::npos )
+            channelName = channelName.substr( 0, pos );
+
+        auto channel = m_channelManager.GetChannel( channelName.c_str() );
+        if( channel == NULL )
+        {
+            printf( __FUNCTION__ " m_channelManager.GetChannel returned null! (channel #%s)\n", channelName.c_str() );
+            return FALSE;
+        }
+
+        if( !channel->RemoveUser( x_nick.c_str() ) )
+        {
+            printf( __FUNCTION__ " Channel RemoveUser returned false! (channel #%s, user %s)\n", channelName.c_str(), x_nick.c_str() );
+            return FALSE;
+        }
+
+        printf( "'%s' left '#%s'\n", x_nick.c_str(), channelName.c_str() );
+    }
+    else if( _strcmpi( header, "353" ) == 0 )
+    {
+        string x_data = data;
+
+        size_t pos = x_data.find( " = " );
+        if( pos == string::npos )
+        {
+            printf( __FUNCTION__ " - Malformed userlist received from server.\n" );
+            return FALSE;
+        }
+
+        x_data = x_data.substr( pos + 3 ); // #test :Yarin Nicco_BNC Nicco
+
+        if( ( pos = x_data.find( " :" ) ) == string::npos )
+        {
+            printf( __FUNCTION__ " - Malformed userlist received from server.\n" );
+            return FALSE;
+        }
+
+        string channelName = x_data.substr( 0, pos );
+        if( channelName.length() < 2 )
+        {
+            printf( __FUNCTION__ " - Malformed userlist received from server.\n" );
+            return FALSE;
+        }
+
+        const char* channelPtr = channelName.c_str() + 1;
+
+        auto channel = m_channelManager.GetChannel( channelPtr );
+        if( channel == NULL )
+        {
+            printf( __FUNCTION__ " - Could not get channel '#s' in userlist\n", channelPtr );
+            return FALSE;
+        }
+
+        x_data = x_data.substr( pos + 2 );
+        while( ( pos = x_data.find( " " ) ) != string::npos )
+        {
+            string name = x_data.substr( 0, pos );
+            x_data = x_data.substr( pos + 1 );
+            if( name.length() > 0 &&
+                name != m_userinfo.szNick ) // dont add myself
+            {
+                if( !channel->AddUser( name.c_str() ) )
+                {
+                    printf( __FUNCTION__ " - Could not add '%s' to channel '#%s' in userlist request\n", name.c_str(), channelPtr );
+                    return FALSE;
+                }
+
+                printf( "Member of '#%s': '%s'\n", channelPtr, name.c_str() );
+            }
+        }
+    }
+    else if( _strcmpi( header, "366" ) == 0 ) // End of /NAMES list
+    {
+
+    }
+    else if( _strcmpi( header, "PRIVMSG" ) == 0 )
+    {
+        string msg = data;
+        string channelName;
+
+        size_t pos = msg.find( " :" );
+        if( pos == string::npos )
+        {
+            printf( __FUNCTION__ " - Malformed PRIVMSG\n" );
+            return FALSE;
+        }
+
+        channelName = msg.substr( 0, pos );
+        msg = msg.substr( pos + 2 );
+
+        if( channelName.length() < 2 )
+        {
+            printf( __FUNCTION__ " - Malformed channel name in PRIVMSG.\n" );
+            return FALSE;
+        }
+
+        const char* channelPtr = channelName.c_str() + 1;
+
+        printf( "[#%s] <%s> %s\n", channelPtr, x_nick.c_str(), msg.c_str() );
     }
 
     return TRUE;

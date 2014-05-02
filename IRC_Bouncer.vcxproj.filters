@@ -30,6 +30,9 @@
     <ClCompile Include="IRC\IrcClient.cpp">
       <Filter>IRC</Filter>
     </ClCompile>
+    <ClCompile Include="IRC\ChannelManager.cpp">
+      <Filter>IRC</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="StdAfx.h">
@@ -39,6 +42,12 @@
       <Filter>Logger</Filter>
     </ClInclude>
     <ClInclude Include="IRC\IrcClient.h">
+      <Filter>IRC</Filter>
+    </ClInclude>
+    <ClInclude Include="IRC\ChannelManager.h">
+      <Filter>IRC</Filter>
+    </ClInclude>
+    <ClInclude Include="IRC\IRCStandards.h">
       <Filter>IRC</Filter>
     </ClInclude>
   </ItemGroup>
