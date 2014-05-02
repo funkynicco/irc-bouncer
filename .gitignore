@@ -1,0 +1,12 @@
+# gitignore
+
+# Folders to ignore
+Debug/
+Release/
+Log/
+
+# Filetypes to ignore
+*.opensdf
+*.sdf
+*.suo
+*.user
