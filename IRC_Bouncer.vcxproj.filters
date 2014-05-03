@@ -33,6 +33,9 @@
     <ClCompile Include="IRC\ChannelManager.cpp">
       <Filter>IRC</Filter>
     </ClCompile>
+    <ClCompile Include="IRC\IrcBouncer.cpp">
+      <Filter>IRC</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="StdAfx.h">
@@ -48,6 +51,9 @@
       <Filter>IRC</Filter>
     </ClInclude>
     <ClInclude Include="IRC\IRCStandards.h">
+      <Filter>IRC</Filter>
+    </ClInclude>
+    <ClInclude Include="IRC\IrcBouncer.h">
       <Filter>IRC</Filter>
     </ClInclude>
   </ItemGroup>

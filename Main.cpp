@@ -9,11 +9,6 @@
     return 1; \
     }
 
-char *UseEmptyString( char *string )
-{
-    return ( string ? string : "" );
-}
-
 int main( int argc, char* argv[] )
 {
     int port = 8520;
@@ -50,7 +45,7 @@ int main( int argc, char* argv[] )
     strcpy( user.szNick, "Nicco_BNC" );
     strcpy( user.szName, "Nicco BNC" );
 
-    CIrcClient client;
+    CIrcBouncer client;
 
     client.SetUserinfo( &user );
 
@@ -58,14 +53,22 @@ int main( int argc, char* argv[] )
     {
         printf( "Connection succeeded.\n" );
 
-        while( client.IsConnected() )
+        printf( "Starting BNC server on port %d\n", port );
+        if( client.StartServer( port ) )
         {
-            client.Process();
+            printf( "BNC server started!\n" );
 
-            Sleep( 50 );
+            while( client.IsConnectedToServer() )
+            {
+                client.Process();
+
+                Sleep( 50 );
+            }
+
+            printf( "Connection closed.\n" );
         }
-
-        printf( "Connection closed.\n" );
+        else
+            printf( "Failed to start BNC server!\n" );
     }
     else
         printf( "Connection failed to server.\n" );

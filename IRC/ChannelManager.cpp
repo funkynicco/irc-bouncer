@@ -18,6 +18,7 @@ bIsMe( FALSE )
 IrcChannel::IrcChannel()
 {
     *szName = 0;
+    *szTopic = 0;
 }
 
 IrcChannel::~IrcChannel()

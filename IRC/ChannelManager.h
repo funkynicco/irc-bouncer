@@ -18,6 +18,7 @@ struct IrcChannel
     BOOL IsMember( const char* name );
 
     char szName[ MAX_CHANNEL_NAME ];
+    char szTopic[ MAX_TOPIC_NAME ];
     map<string, IrcChannelUser*> m_users;
 };
 

@@ -18,3 +18,4 @@ using namespace std;
 #include "IRC\IRCStandards.h"
 #include "IRC\ChannelManager.h"
 #include "IRC\IrcClient.h"
+#include "IRC\IrcBouncer.h"

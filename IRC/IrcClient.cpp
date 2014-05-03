@@ -2,7 +2,8 @@
 #include "IrcClient.h"
 
 CIrcClient::CIrcClient() :
-m_socket( INVALID_SOCKET )
+m_socket( INVALID_SOCKET ),
+m_pCallback( NULL )
 {
     FD_ZERO( &m_fd );
     m_tv.tv_sec = 0;
@@ -40,6 +41,8 @@ BOOL CIrcClient::Connect( const char* address, int port )
         m_userinfo.szName );
 
     OnConnect();
+    if( m_pCallback )
+        m_pCallback->OnConnect();
     return TRUE;
 }
 
@@ -51,6 +54,8 @@ void CIrcClient::Close()
         m_socket = INVALID_SOCKET;
 
         OnDisconnect();
+        if( m_pCallback )
+            m_pCallback->OnDisconnect();
     }
 }
 
@@ -69,7 +74,7 @@ void CIrcClient::Process()
         int len = recv( m_socket, m_buffer, sizeof( m_buffer ), 0 );
         if( len > 0 )
         {
-            //LogData( FALSE, m_buffer, len );
+            LogData( FALSE, m_buffer, len );
             PreprocessData( m_buffer, len );
         }
         else
@@ -142,7 +147,7 @@ BOOL CIrcClient::PreprocessData( const char* data, int length )
                     continue;
             }
 
-            // :SillyBot!SillyBot@46-116-168-232.bb.netvision.net.il QUIT :Ping timeout: 121 seconds\r\n
+            // :nick!user@host.net QUIT :Ping timeout: 121 seconds\r\n
             // :penguin.omega.org.za
             if( packet[ 0 ] == ':' )
             {
@@ -207,6 +212,9 @@ BOOL CIrcClient::PreprocessPacket( const char* host, const char* header, const c
         x_host = host_x;
     else
         x_nick = host_x;
+
+    if( m_pCallback )
+        m_pCallback->OnPacket( x_nick, x_account, x_host, header, data );
 
     //printf( "HST(%s), HDR(%s), DT(%s)\n", host_x.c_str(), header, data_small );
     if( x_nick.length() > 0 &&
@@ -368,6 +376,45 @@ BOOL CIrcClient::PreprocessPacket( const char* host, const char* header, const c
         const char* channelPtr = channelName.c_str() + 1;
 
         printf( "[#%s] <%s> %s\n", channelPtr, x_nick.c_str(), msg.c_str() );
+    }
+    else if( _strcmpi( header, "332" ) == 0 )
+    {
+        // :host 332 mynick #thechannel :topic name goes here
+        string channelName = data;
+        size_t pos = channelName.find( " #" );
+        if( pos == string::npos )
+        {
+            printf( "Malformed 332 header\n" );
+            return FALSE;
+        }
+
+        channelName = channelName.substr( pos + 2 );
+        if( ( pos = channelName.find( " :" ) ) != string::npos )
+        {
+            string topic = channelName.substr( pos + 2 );
+            channelName = channelName.substr( 0, pos );
+
+            auto channel = m_channelManager.GetChannel( channelName.c_str() );
+            if( channel == NULL )
+            {
+                printf( "Received topic for unknown channel #%s => %s\n", channelName.c_str(), topic.c_str() );
+                return FALSE;
+            }
+
+            if( topic.length() >= MAX_TOPIC_NAME )
+            {
+                printf( "Received too big topic for #%s => %s\n", channelName.c_str(), topic.c_str() );
+                return FALSE;
+            }
+
+            strcpy( channel->szTopic, topic.c_str() );
+            printf( "Set topic #%s: '%s'\n", channelName.c_str(), topic.c_str() );
+        }
+        else
+        {
+            printf( "Malformed 332 header\n" );
+            return FALSE;
+        }
     }
 
     return TRUE;
