@@ -377,9 +377,8 @@ BOOL CIrcClient::PreprocessPacket( const char* host, const char* header, const c
 
         printf( "[#%s] <%s> %s\n", channelPtr, x_nick.c_str(), msg.c_str() );
     }
-    else if( _strcmpi( header, "332" ) == 0 )
+    else if( _strcmpi( header, "332" ) == 0 ) // :host 332 mynick #thechannel :topic name goes here
     {
-        // :host 332 mynick #thechannel :topic name goes here
         string channelName = data;
         size_t pos = channelName.find( " #" );
         if( pos == string::npos )
